@@ -1150,10 +1150,24 @@ with tab_dashboard_main:
     template_name = "plotly_white" if "plotly_white" in pio.templates else None
     st.subheader("📊 Quick Overview")
 
-    today = datetime.today()
-    current_year = today.year
+    # ===============================
+    # 📅 SELECT YEAR (FIX CỨNG LỖI 2026)
+    # ===============================
+    available_years = sorted(df['Year'].dropna().unique().astype(int))
 
+    if not available_years:
+        st.error("❌ No year data available")
+        st.stop()
+
+    current_year = st.selectbox(
+        "📅 Select year",
+        available_years,
+        index=len(available_years) - 1
+    )
+
+    # ===============================
     # 🎯 Chuyển đổi cột 'Month' nếu cần
+    # ===============================
     if df['Month'].dtype == 'O':
         month_str_to_num = {
             month: i for i, month in enumerate(
@@ -1162,7 +1176,9 @@ with tab_dashboard_main:
         }
         df['Month'] = df['Month'].map(month_str_to_num)
 
+    # ===============================
     # 📅 Danh sách tháng có dữ liệu theo năm đã chọn
+    # ===============================
     available_months = sorted(
         df[df['Year'] == current_year]['Month']
         .dropna()
@@ -1170,7 +1186,6 @@ with tab_dashboard_main:
         .astype(int)
     )
 
-    # 🚨 Không có dữ liệu tháng → dừng app an toàn
     if not available_months:
         st.warning(f"No month data available for year {current_year}")
         st.stop()
@@ -1180,7 +1195,9 @@ with tab_dashboard_main:
         for i in available_months
     }
     
+    # ===============================
     # 📌 Selectbox chọn tháng
+    # ===============================
     month_options = {
         f"{month_name_map[m]} {current_year}": (current_year, m)
         for m in available_months
@@ -1191,14 +1208,15 @@ with tab_dashboard_main:
         list(month_options.keys())
     )
 
-    # 🚨 Phòng thủ tuyệt đối
     if selected_month_label not in month_options:
         st.stop()
 
     current_year, current_month = month_options[selected_month_label]
     current_month_name = month_name_map[current_month]
 
+    # ===============================
     # 📆 Tính tuần
+    # ===============================
     def get_week_date_range(year, week_num):
         try:
             d = datetime.strptime(f'{year}-W{int(week_num)}-1', "%Y-W%W-%w")
