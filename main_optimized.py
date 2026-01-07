@@ -1162,17 +1162,39 @@ with tab_dashboard_main:
         }
         df['Month'] = df['Month'].map(month_str_to_num)
 
-    # 📅 Danh sách tháng có dữ liệu
-    available_months = sorted(df[df['Year'] == current_year]['Month'].dropna().unique().astype(int))
-    month_name_map = {i: datetime(1900, i, 1).strftime('%B') for i in available_months}
+    # 📅 Danh sách tháng có dữ liệu theo năm đã chọn
+    available_months = sorted(
+        df[df['Year'] == current_year]['Month']
+        .dropna()
+        .unique()
+        .astype(int)
+    )
 
+    # 🚨 Không có dữ liệu tháng → dừng app an toàn
+    if not available_months:
+        st.warning(f"No month data available for year {current_year}")
+        st.stop()
+
+    month_name_map = {
+        i: datetime(1900, i, 1).strftime('%B')
+        for i in available_months
+    }
+    
     # 📌 Selectbox chọn tháng
     month_options = {
         f"{month_name_map[m]} {current_year}": (current_year, m)
         for m in available_months
     }
 
-    selected_month_label = st.selectbox("📅 Select month", list(month_options.keys()), index=0)
+    selected_month_label = st.selectbox(
+        "📅 Select month",
+        list(month_options.keys())
+    )
+
+    # 🚨 Phòng thủ tuyệt đối
+    if selected_month_label not in month_options:
+        st.stop()
+
     current_year, current_month = month_options[selected_month_label]
     current_month_name = month_name_map[current_month]
 
