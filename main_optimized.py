@@ -1180,12 +1180,13 @@ with tab_dashboard_main:
     # 📅 Danh sách tháng có dữ liệu theo năm đã chọn
     # ===============================
     available_months = sorted(
-        df[df['Year'] == current_year]['Month']
+        pd.to_numeric(
+            df[df['Year'] == current_year]['Month'],
+            errors='coerce'
+        )
         .dropna()
-        .astype(str)
-        .str.replace(r'\.0$', '', regex=True)
-        .loc[lambda x: x.str.match(r'^\d+$')]
         .astype(int)
+        .loc[lambda x: (x >= 1) & (x <= 12)]
         .unique()
     )
 
