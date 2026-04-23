@@ -1182,8 +1182,11 @@ with tab_dashboard_main:
     available_months = sorted(
         df[df['Year'] == current_year]['Month']
         .dropna()
-        .unique()
+        .astype(str)
+        .str.replace(r'\.0$', '', regex=True)
+        .loc[lambda x: x.str.match(r'^\d+$')]
         .astype(int)
+        .unique()
     )
 
     if not available_months:
