@@ -344,6 +344,11 @@ def cached_load():
     df['Year'] = df['Date'].dt.year.astype(int)
     df['Month'] = df['Date'].dt.month.astype(int)
     df['Week'] = df['Date'].dt.isocalendar().week.astype(int)
+
+    # 👇 CHÈN THÊM 2 DÒNG NÀY VÀO ĐÂY (Khoảng dòng 160-162)
+    df['DayOfWeek'] = df['Date'].dt.dayofweek 
+    df['IsWeekend'] = df['DayOfWeek'].isin([5, 6])
+    
     config_data = read_configs(path_dict['template_file'])
     return df, config_data
 
@@ -1264,6 +1269,47 @@ with tab_dashboard_main:
         st.metric("🗓️ Total Selected Hours", f"{total_hours_week:.1f}h")
     with col2:
         st.metric("📆 Total Monthly Hours", f"{total_hours_month:.1f}h")
+
+    # 📑 VỊ TRÍ CHÈN CHÍNH XÁC CỦA BẠN NẰM NGAY TẠI ĐÂY:
+    # =========================================================================
+    st.markdown("---")
+    st.subheader("🚨 Weekend Overtime Analysis (Thứ 7 & Chủ Nhật)")
+
+    # Lấy dữ liệu của tuần/tháng hiện tại đang được chọn ở bộ lọc Dashboard
+    df_weekend = df_week[df_week['IsWeekend'] == True]
+
+    if not df_weekend.empty:
+        # 1. Tính tổng số giờ làm cuối tuần của TẤT CẢ các dự án trong mốc thời gian lọc
+        total_weekend_hours = df_weekend['Hours'].sum()
+        st.metric("🔥 Total Weekend OT Hours (All Projects)", f"{total_weekend_hours:.1f}h")
+
+        # 2. Tạo bảng tổng hợp số giờ cuối tuần theo TỪNG DỰ ÁN
+        project_weekend_ot = (
+            df_weekend.groupby("Project name")["Hours"]
+            .sum()
+            .sort_values(ascending=False)
+            .reset_index()
+            .rename(columns={"Hours": "Weekend OT Hours"})
+        )
+
+        # Hiển thị bảng dữ liệu gọn gàng
+        st.write("📋 **Bảng tổng hợp giờ tăng ca cuối tuần theo dự án:**")
+        st.dataframe(project_weekend_ot, use_container_width=True)
+
+        # 3. Vẽ biểu đồ trực quan hóa số giờ tăng ca cuối tuần
+        fig_weekend = px.bar(
+            project_weekend_ot,
+            x="Project name",
+            y="Weekend OT Hours",
+            color="Project name",
+            title="📊 Weekend Overtime Hours by Project",
+            template=template_name,
+            text_auto='.1f'
+        )
+        st.plotly_chart(fig_weekend, use_container_width=True)
+    else:
+        st.info("✅ Không có giờ làm việc vào cuối tuần (Thứ 7 / Chủ Nhật) trong khoảng thời gian được chọn.")
+    # =========================================================================
 
     # 🔝 Top 5 Projects
     top_projects = (
