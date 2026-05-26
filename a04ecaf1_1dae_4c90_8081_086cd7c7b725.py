@@ -254,9 +254,42 @@ def export_report(df, config, output_file_path):
                 chart_task.set_categories(cats_ref_task)
                 ws_proj.add_chart(chart_task, f"E1")
 
+            # =========================================================================
+            # 🚨 THỐNG KÊ GIỜ LÀM CUỐI TUẦN THEO THÁNG CỦA DỰ ÁN NÀY TRONG NĂM
+            # =========================================================================
+            df_proj_weekend = df_proj[df_proj['IsWeekend'] == True]
+            
+            summary_weekend_month = df_proj_weekend.groupby('MonthName')['Hours'].sum().reset_index()
+            month_order = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+            summary_weekend_month['MonthName'] = pd.Categorical(summary_weekend_month['MonthName'], categories=month_order, ordered=True)
+            summary_weekend_month = summary_weekend_month.sort_values('MonthName').dropna()
+
+            ws_proj.append([])
+            ws_proj.append([])
+            start_row_ot = ws_proj.max_row + 1
+            ws_proj.append(['Weekend OT Month', 'OT Hours'])
+            
+            for row_data in dataframe_to_rows(summary_weekend_month, index=False, header=False):
+                ws_proj.append(row_data)
+            end_row_ot = ws_proj.max_row
+
+            if not summary_weekend_month.empty:
+                chart_ot_month = LineChart()  # Vẽ biểu đồ đường xu hướng tăng ca cuối tuần theo tháng
+                chart_ot_month.title = f"{project} - Weekend OT Trend by Month"
+                chart_ot_month.x_axis.title = "Month"
+                chart_ot_month.y_axis.title = "Hours"
+                
+                data_ref_ot = Reference(ws_proj, min_col=2, min_row=start_row_ot, max_row=end_row_ot)
+                cats_ref_ot = Reference(ws_proj, min_col=1, min_row=start_row_ot + 1, max_row=end_row_ot)
+                chart_ot_month.add_data(data_ref_ot, titles_from_data=True)
+                chart_ot_month.set_categories(cats_ref_ot)
+                
+                ws_proj.add_chart(chart_ot_month, "E16") # Đặt nằm dưới biểu đồ Task
+            # =========================================================================
+
             start_row_raw_data = ws_proj.max_row + 2 if ws_proj.max_row > 1 else 1
             if not summary_task.empty:
-                start_row_raw_data += 15
+                start_row_raw_data += 15 # Đẩy bảng dữ liệu thô xuống nhường chỗ cho cả 2 biểu đồ (E1 và E16)
 
             for r_idx, r in enumerate(dataframe_to_rows(df_proj, index=False, header=True)):
                 for c_idx, cell_val in enumerate(r):
@@ -359,7 +392,7 @@ def export_pdf_report(df, config, pdf_report_path, logo_path):
                 df_proj_weekend = df_proj[df_proj['IsWeekend'] == True]
                 if not df_proj_weekend.empty:
                     ot_summary = df_proj_weekend.groupby('Task')['Hours'].sum().sort_values(ascending=False)
-                    if not ot_summary.empty and ot_summary.sum() > 0:
+                    if not ot_summary.empty && ot_summary.sum() > 0:
                         fig, ax = plt.subplots(figsize=(10, 5))
                         bars = ax.barh(ot_summary.index, ot_summary.values, color='salmon')
                         ax.bar_label(bars, labels=[f"{v:.1f}" for v in ot_summary.values], padding=3)
