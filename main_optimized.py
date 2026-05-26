@@ -337,12 +337,19 @@ if not os.path.exists(path_dict['template_file']):
 def cached_load():
     df_raw = load_raw_data(path_dict['template_file'])
     df = df_raw.copy()
+    # ✅ FIX CHÍNH: chuẩn hoá Date → Year → Month → Week
+    df['Date'] = pd.to_datetime(df['Date'], dayfirst=True, errors='coerce')
+    df = df.dropna(subset=['Date'])
+
+    df['Year'] = df['Date'].dt.year.astype(int)
+    df['Month'] = df['Date'].dt.month.astype(int)
+    df['Week'] = df['Date'].dt.isocalendar().week.astype(int)
     config_data = read_configs(path_dict['template_file'])
-    return df_raw, config_data
+    return df, config_data
 
 with st.spinner(get_text('loading_data')):
-    df_raw, config_data = cached_load()
-    df = df_raw.copy()  # ✅ THÊM DÒNG NÀY ở đây
+    df, config_data = cached_load()   # ✅ lấy đúng df đã clean
+    df_raw = df.copy()                # (optional) nếu bạn vẫn cần df_raw để hiển thị
 # Hiển thị ngày cập nhật mới nhất
 if 'Date' in df_raw.columns:
     latest_date = pd.to_datetime(df_raw['Date'], errors='coerce').max()
@@ -1180,10 +1187,14 @@ with tab_dashboard_main:
     # 📅 Danh sách tháng có dữ liệu theo năm đã chọn
     # ===============================
     available_months = sorted(
-        df[df['Year'] == current_year]['Month']
+        pd.to_numeric(
+            df[df['Year'] == current_year]['Month'],
+            errors='coerce'
+        )
         .dropna()
-        .unique()
         .astype(int)
+        .loc[lambda x: (x >= 1) & (x <= 12)]
+        .unique()
     )
 
     if not available_months:
