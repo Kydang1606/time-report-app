@@ -6,9 +6,8 @@ import plotly.express as px
 import pdfkit
 from jinja2 import Template
 import uuid
-import os
 import tempfile
-from datetime import datetime, timedelta
+from datetime import timedelta
 import seaborn as sns
 import matplotlib.pyplot as plt
 import plotly.io as pio
@@ -34,38 +33,35 @@ path_dict = setup_paths()
 # KHỞI TẠO CÁC BIẾN TRẠNG THÁI PHIÊN (SESSION STATE VARIABLES)
 # ==============================================================================
 if 'comparison_mode_select_tab_main' not in st.session_state:
-    st.session_state.comparison_mode_select_tab_main = "Compare Projects in a Month"  # hoặc giá trị phù hợp với `display_options`
+    st.session_state.comparison_mode_select_tab_main = "Compare Projects in a Month"  
     
 if 'comparison_mode' not in st.session_state:
-    st.session_state.comparison_mode = "So Sánh Dự Án Trong Một Tháng" # Hoặc giá trị mặc định phù hợp
+    st.session_state.comparison_mode = "So Sánh Dự Án Trong Một Tháng" 
 
 if 'comparison_selected_years' not in st.session_state:
-    st.session_state.comparison_selected_years = [datetime.now().year] # Hoặc giá trị mặc định phù hợp
+    st.session_state.comparison_selected_years = [datetime.now().year] 
 
 if 'comparison_selected_months' not in st.session_state:
-    st.session_state.comparison_selected_months = [] # Hoặc giá trị mặc định phù hợp
+    st.session_state.comparison_selected_months = [] 
 
 if 'comparison_selected_projects' not in st.session_state:
-    st.session_state.comparison_selected_projects = [] # Hoặc giá trị mặc định phù hợp
+    st.session_state.comparison_selected_projects = [] 
 
 if 'comparison_selected_months_over_time' not in st.session_state:
-    st.session_state.comparison_selected_months_over_time = [] # Khởi tạo là một danh sách rỗng hoặc giá trị mặc định phù hợp
+    st.session_state.comparison_selected_months_over_time = [] 
 
-if 'selected_years' not in st.session_state: # Ví dụ cho bộ lọc báo cáo tiêu chuẩn
+if 'selected_years' not in st.session_state: 
     st.session_state.selected_years = [datetime.now().year]
 
-if 'selected_months' not in st.session_state: # Ví dụ cho bộ lọc báo cáo tiêu chuẩn
+if 'selected_months' not in st.session_state: 
     st.session_state.selected_months = []
 
-# Thêm dòng này để mặc định ngôn ngữ là tiếng Anh
 if 'selected_language' not in st.session_state:
     st.session_state.selected_language = "English"
-    
 
 # ---------------------------
 # PHẦN XÁC THỰC TRUY CẬP
 # ---------------------------
-
 @st.cache_data
 def load_invited_emails():
     try:
@@ -79,10 +75,8 @@ def load_invited_emails():
         st.error(f"Lỗi khi tải file invited_emails.csv: {e}")
         return []
 
-# Tải danh sách email được mời một lần
 INVITED_EMAILS = load_invited_emails()
 
-# Hàm ghi log truy cập
 def log_user_access(email):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     log_entry = {"Time": timestamp, "Email": email}
@@ -90,7 +84,6 @@ def log_user_access(email):
         st.session_state.access_log = []
     st.session_state.access_log.append(log_entry)
 
-# Logic xác thực người dùng
 if "user_email" not in st.session_state:
     st.set_page_config(page_title="Triac Time Report", layout="wide")
     st.title("🔐 Access authentication")
@@ -105,16 +98,14 @@ if "user_email" not in st.session_state:
             st.rerun()
         else:
             st.error("❌ Email is not on the invitation list.")
-    st.stop() # Dừng thực thi nếu chưa xác thực
+    st.stop() 
 
 # ---------------------------
 # PHẦN GIAO DIỆN CHÍNH CỦA ỨNG DỤNG
 # ---------------------------
-# Sử dụng session_state để lưu trữ lựa chọn ngôn ngữ
 if 'lang' not in st.session_state:
-    st.session_state.lang = 'en' # Mặc định là tiếng Anh
+    st.session_state.lang = 'en' 
 
-# Cấu hình trang (chỉ chạy một lần sau khi xác thực)
 st.set_page_config(page_title="Triac Time Report", layout="wide")
 
 st.markdown("""
@@ -125,9 +116,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# =====================================
-# Khởi tạo ngôn ngữ và từ điển văn bản
-# =====================================
 TEXTS = {
     'en': {
         'app_title': "📊 Time Report Generator",
@@ -173,9 +161,6 @@ TEXTS = {
         'data_filtered_success': "✅ Data filtered successfully for comparison.",
         'comparison_data_preview': "Comparison Data Preview",
         'generating_comparison_excel': "Generating Comparison Excel Report...",
-        'compare_projects_month': "Compare multiple projects in a month",
-        'compare_projects_year': "Compare multiple projects in a year",
-        'compare_projects_over_time': "Compare multiple projects across months/years",
         'comparison_excel_generated': "✅ Comparison Excel Report generated: {}",
         'download_comparison_excel': "📥 Download Comparison Excel",
         'generating_comparison_pdf': "Generating Comparison PDF Report...",
@@ -210,6 +195,7 @@ TEXTS = {
         'select_all_projects_checkbox': "Select all projects"
     },
     'vi': {
+        'vi': "Tiếng Việt",
         'app_title': "📊 Công cụ tạo báo cáo thời gian",
         'lang_select': "Chọn ngôn ngữ:",
         'language_vi': "Tiếng Việt",
@@ -331,6 +317,10 @@ def cached_load():
     # Khai báo dữ liệu cuối tuần ngay từ khâu tiền xử lý
     df['DayOfWeek'] = df['Date'].dt.dayofweek 
     df['IsWeekend'] = df['DayOfWeek'].isin([5, 6])
+    
+    # 🌙 LOGIC GIỜ TĂNG CA BUỔI TỐI (TRÊN 8.5 GIỜ / NGÀY)
+    GIO_CHUAN = 8.5
+    df['Night_OT_Hours'] = (df['Hours'] - GIO_CHUAN).clip(lower=0)
     
     config_data = read_configs(path_dict['template_file'])
     return df, config_data
@@ -482,6 +472,70 @@ def create_team_chart(df, config_data=None):
     return fig
 
 # =========================================================================
+# HELPER FUNCTION: DRAW DYNAMIC OT VISUALS (Dùng chung cho cả 2 Dashboard)
+# =========================================================================
+def render_ot_dashboard_analytics(df_scope, is_project_level=False):
+    """Hàm dựng các biểu đồ bóc tách và phân tích dữ liệu OT động"""
+    df_scope = df_scope.copy()
+    df_scope['Weekend_OT_Hours'] = df_scope.apply(lambda r: r['Hours'] if r['IsWeekend'] else 0.0, axis=1)
+    
+    st.markdown("#### 🔍 Bộ lọc đối tượng Tăng ca (OT Search Filter)")
+    col_f1, col_f2, col_f3 = st.columns(3)
+    with col_f1:
+        wcs = sorted(df_scope['Workcentre'].dropna().unique().tolist())
+        selected_wcs = st.multiselect("Lọc theo Nhóm (Workcentre):", wcs, default=wcs, key=f"wc_ot_f_{is_project_level}")
+    with col_f2:
+        tsks = sorted(df_scope['Task'].dropna().unique().tolist())
+        selected_tsks = st.multiselect("Lọc theo Công việc (Task):", tsks, default=tsks, key=f"tsk_ot_f_{is_project_level}")
+    with col_f3:
+        emps = sorted(df_scope['Employee'].dropna().unique().tolist())
+        selected_emps = st.multiselect("Lọc theo Nhân viên (Employee):", emps, default=emps, key=f"emp_ot_f_{is_project_level}")
+        
+    # Áp dụng bộ lọc
+    df_filtered = df_scope[
+        (df_scope['Workcentre'].isin(selected_wcs)) &
+        (df_scope['Task'].isin(selected_tsks)) &
+        (df_scope['Employee'].isin(selected_emps))
+    ]
+    
+    if df_filtered.empty:
+        st.info("ℹ️ Không tìm thấy bản ghi tăng ca nào khớp với bộ lọc đối tượng đã chọn.")
+        return
+
+    # Tabs phân rã chi tiết
+    t_emp, t_tsk, t_wc = st.tabs(["👥 Bóc tách theo Nhân viên", "🛠️ Bóc tách theo Công việc", "🏭 Bóc tách theo Nhóm"])
+    with t_emp:
+        df_emp_ot = df_filtered.groupby('Employee')[['Weekend_OT_Hours', 'Night_OT_Hours']].sum().reset_index()
+        df_emp_ot['Total_OT'] = df_emp_ot['Weekend_OT_Hours'] + df_emp_ot['Night_OT_Hours']
+        df_emp_ot = df_emp_ot.sort_values(by='Total_OT', ascending=False)
+        
+        fig = px.bar(df_emp_ot.head(15), x='Employee', y=['Weekend_OT_Hours', 'Night_OT_Hours'], 
+                     title="Top Nhân viên phát sinh Giờ OT nhiều nhất", text_auto='.1f')
+        st.plotly_chart(fig, use_container_width=True)
+        st.dataframe(df_emp_ot, use_container_width=True)
+        
+    with t_tsk:
+        df_tsk_ot = df_filtered.groupby('Task')[['Weekend_OT_Hours', 'Night_OT_Hours']].sum().reset_index()
+        df_tsk_ot['Total_OT'] = df_tsk_ot['Weekend_OT_Hours'] + df_tsk_ot['Night_OT_Hours']
+        df_tsk_ot = df_tsk_ot.sort_values(by='Total_OT', ascending=False)
+        
+        fig = px.bar(df_tsk_ot.head(15), x='Task', y=['Weekend_OT_Hours', 'Night_OT_Hours'], 
+                     title="Các Công việc (Task) phát sinh Giờ OT nhiều nhất", text_auto='.1f')
+        st.plotly_chart(fig, use_container_width=True)
+        st.dataframe(df_tsk_ot, use_container_width=True)
+        
+    with t_wc:
+        df_wc_ot = df_filtered.groupby('Workcentre')[['Weekend_OT_Hours', 'Night_OT_Hours']].sum().reset_index()
+        df_wc_ot['Total_OT'] = df_wc_ot['Weekend_OT_Hours'] + df_wc_ot['Night_OT_Hours']
+        df_wc_ot = df_wc_ot.sort_values(by='Total_OT', ascending=False)
+        
+        fig = px.bar(df_wc_ot, x='Workcentre', y=['Weekend_OT_Hours', 'Night_OT_Hours'], 
+                     title="Phân bổ Giờ OT theo các Nhóm (Workcentre)", text_auto='.1f')
+        st.plotly_chart(fig, use_container_width=True)
+        st.dataframe(df_wc_ot, use_container_width=True)
+
+
+# =========================================================================
 # STANDARD REPORT TAB
 # =========================================================================
 with tab_standard_report_main:
@@ -619,8 +673,13 @@ with tab_standard_report_main:
                 fig_hierarchy = create_hierarchy_chart(df_filtered_standard, hierarchy_level)
                 if fig_hierarchy:
                     st.plotly_chart(fig_hierarchy, use_container_width=True)
+                    
+                # 🌙 🔎 THÊM PHÂN ĐOẠN PHÂN TÍCH TĂNG CA (OT) CHO RIÊNG CÁC DỰ ÁN ĐƯỢC CHỌN TRONG BÁO CÁO TIÊU CHUẨN
                 st.markdown("---")
+                st.subheader("🌙 & 📅 Selected Projects OT Dashboard Preview")
+                render_ot_dashboard_analytics(df_filtered_standard, is_project_level=True)
                 
+                st.markdown("---")
                 today_str = datetime.today().strftime("%Y-%m-%d")
                 path_dict = {
                     'output_file': f'outputs/standard/Time_report_Standard_{today_str}.xlsx',
@@ -987,12 +1046,11 @@ with tab_help_main:
     st.markdown(get_text("help_instruction_simple", lang))
 
 # =========================================================================
-# DASHBOARD TAB
+# DASHBOARD TAB (ĐÃ ĐƯỢC TÍCH HỢP TOÀN DIỆN THÊM WEEKEND & NIGHT OT THEO TUẦN/THÁNG)
 # =========================================================================
 with tab_dashboard_main:
-    import plotly.io as pio
     template_name = "plotly_white" if "plotly_white" in pio.templates else None
-    st.subheader("📊 Quick Overview")
+    st.subheader("📊 Quick Overview Dashboard")
 
     available_years = sorted(df['Year'].dropna().unique().astype(int))
     if not available_years:
@@ -1057,58 +1115,37 @@ with tab_dashboard_main:
         df_week = df_month
         selected_week_num = None
 
-    # 📊 Cập nhật tính toán tổng giờ làm việc thông thường và giờ làm cuối tuần
+    # --- TÍNH TOÁN CÁC BIẾN SỐ KPI ---
     total_hours_week = df_week['Hours'].sum()
     total_hours_month = df_month['Hours'].sum()
     
-    # Lấy tổng giờ tăng ca cuối tuần theo khung thời gian tuần/tháng đang được lọc trên Dashboard
+    # 🚨 Tính giờ OT dựa theo phạm vi lọc hiện thời (Theo Tuần / Hoặc cả Tháng)
     total_weekend_hours_filtered = df_week[df_week['IsWeekend'] == True]['Hours'].sum()
+    total_night_hours_filtered = df_week['Night_OT_Hours'].sum()
 
-    # 🛠️ Thay đổi giao diện KPI từ 2 cột thành 3 cột để hiển thị trực tiếp chỉ số OT lên giao diện
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("🗓️ Total Selected Hours", f"{total_hours_week:.1f}h")
-    with col2:
+    # 🛠️ Giao diện KPI 4 cột trực quan
+    m_col1, m_col2, m_col3, m_col4 = st.columns(4)
+    with m_col1:
+        st.metric("🗓️ Total Scope Hours", f"{total_hours_week:.1f}h")
+    with m_col2:
         st.metric("📆 Total Monthly Hours", f"{total_hours_month:.1f}h")
-    with col3:
-        # Hiển thị trực quan chỉ số tăng ca cuối tuần
-        st.metric("🚨 Total Weekend OT Hours", f"{total_weekend_hours_filtered:.1f}h")
+    with m_col3:
+        st.metric("📅 Total Weekend OT Hours", f"{total_weekend_hours_filtered:.1f}h")
+    with m_col4:
+        st.metric("🌙 Total Night OT Hours", f"{total_night_hours_filtered:.1f}h")
 
-    # 📑 PHẦN TÍNH TOÁN VÀ LỌC GIỜ LÀM VIỆC CUỐI TUẦN (WEEKEND OVERTIME) CHUNG CHO CÁC DỰ ÁN
+    # =========================================================================
+    # Phân đoạn Dashboard OT nâng cao: Hỗ trợ truy xuất sâu đối tượng
+    # =========================================================================
     st.markdown("---")
-    st.subheader("🚨 Weekend Overtime Analysis (Thứ 7 & Chủ Nhật)")
+    st.subheader("🚨 Overtime Analytics (Phân tích chi tiết Tăng ca Đêm & Cuối tuần)")
+    render_ot_dashboard_analytics(df_week, is_project_level=False)
 
-    df_weekend = df_week[df_week['IsWeekend'] == True]
-
-    if not df_weekend.empty:
-        total_weekend_hours = df_weekend['Hours'].sum()
-        st.metric("🔥 Total Weekend OT Hours (All Projects)", f"{total_weekend_hours:.1f}h")
-
-        project_weekend_ot = (
-            df_weekend.groupby("Project name")["Hours"]
-            .sum()
-            .sort_values(ascending=False)
-            .reset_index()
-            .rename(columns={"Hours": "Weekend OT Hours"})
-        )
-
-        st.write("📋 **Bảng tổng hợp giờ tăng ca cuối tuần theo dự án:**")
-        st.dataframe(project_weekend_ot, use_container_width=True)
-
-        fig_weekend = px.bar(
-            project_weekend_ot,
-            x="Project name",
-            y="Weekend OT Hours",
-            color="Project name",
-            title="📊 Weekend Overtime Hours by Project",
-            template=template_name,
-            text_auto='.1f'
-        )
-        st.plotly_chart(fig_weekend, use_container_width=True)
-    else:
-        st.info("✅ Không có giờ làm việc vào cuối tuần (Thứ 7 / Chủ Nhật) trong khoảng thời gian được chọn.")
-
-    # 🔝 Top 5 Projects
+    # =========================================================================
+    # GIỮ NGUYÊN CÁC BIỂU ĐỒ TỔNG QUAN KHÁC CỦA BẠN PHÍA DƯỚI
+    # =========================================================================
+    st.markdown("---")
+    st.subheader("🔝 Top 5 Projects")
     top_projects = (
         df_week.groupby("Project name")["Hours"]
         .sum()
