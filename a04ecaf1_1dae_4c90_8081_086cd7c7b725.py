@@ -88,8 +88,11 @@ def read_configs(template_file):
         print(f"Lỗi khi đọc cấu hình: {e}")
         return {'mode': 'year', 'year': datetime.now().year, 'months': [], 'project_filter_df': pd.DataFrame(columns=['Project Name', 'Include'])}
 
+# =========================================================================
+# 🔄 HÀM 1 ĐÃ ĐƯỢC CẬP NHẬT: load_raw_data
+# =========================================================================
 def load_raw_data(template_file):
-    """Tải dữ liệu thô từ file template Excel và thiết lập thuộc tính ngày cuối tuần."""
+    """Tải dữ liệu thô từ file template Excel và thiết lập thuộc tính ngày cuối tuần, tăng ca đêm."""
     try:
         df = pd.read_excel(template_file, sheet_name='Raw Data', engine='openpyxl')
         df.columns = df.columns.str.strip()
@@ -108,6 +111,13 @@ def load_raw_data(template_file):
         
         # Đảm bảo cột 'Hours' là số
         df['Hours'] = pd.to_numeric(df['Hours'], errors='coerce').fillna(0)
+        
+        # 🌙 THÊM LOGIC TÍNH GIỜ TĂNG CA BUỔI TỐI (TRÊN 8.5 TIẾNG/NGÀY)
+        GIO_CHUAN = 8.5
+        # Nếu Hours > 8.5 thì lấy phần chênh lệch, ngược lại bằng 0
+        df['Night_OT_Hours'] = (df['Hours'] - GIO_CHUAN).clip(lower=0)
+        # Giờ làm việc bình thường (tối đa là 8.5 tiếng)
+        df['Normal_Hours'] = df['Hours'].clip(upper=GIO_CHUAN)
         
         return df
     except Exception as e:
@@ -142,8 +152,11 @@ def apply_filters(df, config):
 
     return df_filtered
 
+# =========================================================================
+# 🔄 HÀM 2 ĐÃ ĐƯỢC CẬP NHẬT: export_report
+# =========================================================================
 def export_report(df, config, output_file_path):
-    """Xuất báo cáo tiêu chuẩn ra file Excel kèm theo phân tích Tăng ca cuối tuần."""
+    """Xuất báo cáo tiêu chuẩn ra file Excel kèm theo phân tích Tăng ca cuối tuần & Tăng ca đêm."""
     mode = config.get('mode', 'year')
     
     groupby_cols = []
@@ -202,9 +215,7 @@ def export_report(df, config, output_file_path):
             
             ot_summary = df_weekend.groupby(['Project name', 'Task'])['Hours'].sum().reset_index().sort_values(by='Hours', ascending=False)
             for row in ot_summary.itertuples(index=False):
-                ws_ot.append([row['Project name'] if isinstance(row, dict) else row.Project_name if hasattr(row, 'Project_name') else row[0], 
-                              row['Task'] if isinstance(row, dict) else row.Task if hasattr(row, 'Task') else row[1], 
-                              row['Hours'] if isinstance(row, dict) else row.Hours if hasattr(row, 'Hours') else row[2]])
+                ws_ot.append([row.Project_name, row.Task, row.Hours])
             
             # Biểu đồ tổng giờ tăng ca cuối tuần theo Dự án
             proj_ot_chart_data = df_weekend.groupby('Project name')['Hours'].sum().reset_index()
@@ -225,6 +236,36 @@ def export_report(df, config, output_file_path):
             chart_ot.add_data(data_ref_ot, titles_from_data=True)
             chart_ot.set_categories(cats_ref_ot)
             ws_ot.add_chart(chart_ot, "E2")
+
+        # 🌙 TẠO SHEET TỔNG HỢP GIỜ TĂNG CA ĐÊM (NIGHT OT SUMMARY)
+        df_night_ot = df[df['Night_OT_Hours'] > 0]
+        if not df_night_ot.empty:
+            ws_night_ot = wb.create_sheet("Night OT Summary", 2)
+            ws_night_ot.append(['Project name', 'Employee', 'Task', 'Night OT Hours'])
+            
+            night_ot_summary = df_night_ot.groupby(['Project name', 'Employee', 'Task'])['Night_OT_Hours'].sum().reset_index().sort_values(by='Night_OT_Hours', ascending=False)
+            for row in night_ot_summary.itertuples(index=False):
+                ws_night_ot.append([row.Project_name, row.Employee, row.Task, row.Night_OT_Hours])
+                
+            # Biểu đồ tổng giờ tăng ca đêm theo Dự án
+            proj_night_chart_data = df_night_ot.groupby('Project name')['Night_OT_Hours'].sum().reset_index()
+            ws_night_ot.append([])
+            ws_night_ot.append(['🌙 Project Night OT Summary'])
+            ws_night_ot.append(['Project name', 'Total Night OT Hours'])
+            n_start_row = ws_night_ot.max_row
+            for row in proj_night_chart_data.itertuples(index=False):
+                ws_night_ot.append([row[0], row[1]])
+            n_end_row = ws_night_ot.max_row
+            
+            chart_night = BarChart()
+            chart_night.title = "Night Overtime Hours by Project (>8.5h/day)"
+            chart_night.x_axis.title = "Project"
+            chart_night.y_axis.title = "Hours"
+            data_ref_n = Reference(ws_night_ot, min_col=2, min_row=n_start_row, max_row=n_end_row)
+            cats_ref_n = Reference(ws_night_ot, min_col=1, min_row=n_start_row+1, max_row=n_end_row)
+            chart_night.add_data(data_ref_n, titles_from_data=True)
+            chart_night.set_categories(cats_ref_n)
+            ws_night_ot.add_chart(chart_night, "F2")
 
         for project in df['Project name'].unique():
             df_proj = df[df['Project name'] == project]
@@ -316,7 +357,6 @@ def export_report(df, config, output_file_path):
     except Exception as e:
         print(f"Lỗi khi xuất báo cáo tiêu chuẩn: {e}")
         return False
-
 
 def export_pdf_report(df, config, pdf_report_path, logo_path):
     """Xuất báo cáo PDF tiêu chuẩn có tích hợp thêm biểu đồ Tăng ca cuối tuần."""
@@ -433,7 +473,6 @@ def export_pdf_report(df, config, pdf_report_path, logo_path):
     finally:
         if os.path.exists(tmp_dir):
             shutil.rmtree(tmp_dir)
-
 
 def create_pdf_from_charts_comp(charts_data, output_path, title, config_info, logo_path_inner, filter_mode="Total"):
     from collections import defaultdict
@@ -1025,10 +1064,10 @@ def export_comparison_report(df_comparison, comparison_config, output_file_path,
                     chart.y_axis.title = "Giờ"
                     
                     data_ref = Reference(ws, min_col=df_comparison.columns.get_loc('Total Hours') + 1, min_row=data_start_row, max_row=max_row_chart)
-                    cats_ref = Reference(ws, min_col=df_comparison.columns.get_loc('Project Name') + 1, min_row=data_start_row, max_row=max_row_chart) 
+                    cats = Reference(ws, min_col=df_comparison.columns.get_loc('Project Name') + 1, min_row=data_start_row, max_row=max_row_chart) 
                     
                     chart.add_data(data_ref, titles_from_data=False) 
-                    chart.set_categories(cats_ref)
+                    chart.set_categories(cats)
                 
                 elif comparison_mode in ["So Sánh Dự Án Trong Một Năm", "Compare Projects in a Year"]:
                     chart = BarChart()
@@ -1045,10 +1084,10 @@ def export_comparison_report(df_comparison, comparison_config, output_file_path,
                         max_col = df_comparison.columns.get_loc(ordered_month_cols[-1]) + 1
                         
                         data_ref = Reference(ws, min_col=min_col, max_col=max_col, min_row=data_start_row, max_row=max_row_chart)
-                        cats_ref = Reference(ws, min_col=min_col, min_row=1, max_col=max_col)
+                        cats = Reference(ws, min_col=min_col, min_row=1, max_col=max_col)
                         
                         chart.add_data(data_ref, titles_from_data=False)
-                        chart.set_categories(cats_ref)      
+                        chart.set_categories(cats)      
                     else:
                         wb.save(output_file_path)
                         return True
@@ -1064,9 +1103,9 @@ def export_comparison_report(df_comparison, comparison_config, output_file_path,
                         chart.x_axis.title = "Tháng"
                         chart.y_axis.title = "Giờ"
                         data_ref = Reference(ws, min_col=df_comparison.columns.get_loc(total_hours_col_name) + 1, min_row=data_start_row, max_row=max_row_chart)
-                        cats_ref = Reference(ws, min_col=df_comparison.columns.get_loc('MonthName') + 1, min_row=data_start_row, max_row=max_row_chart)
+                        cats = Reference(ws, min_col=df_comparison.columns.get_loc('MonthName') + 1, min_row=data_start_row, max_row=max_row_chart)
                         chart.add_data(data_ref, titles_from_data=False)
-                        chart.set_categories(cats_ref)
+                        chart.set_categories(cats)
 
                     elif 'Year' in df_comparison.columns and not comparison_config['months'] and len(comparison_config['years']) > 1:
                         chart = BarChart()
@@ -1074,9 +1113,9 @@ def export_comparison_report(df_comparison, comparison_config, output_file_path,
                         chart.x_axis.title = "Năm"
                         chart.y_axis.title = "Giờ"
                         data_ref = Reference(ws, min_col=df_comparison.columns.get_loc(total_hours_col_name) + 1, min_row=data_start_row, max_row=max_row_chart)
-                        cats_ref = Reference(ws, min_col=df_comparison.columns.get_loc('Year') + 1, min_row=data_start_row, max_row=max_row_chart)
+                        cats = Reference(ws, min_col=df_comparison.columns.get_loc('Year') + 1, min_row=data_start_row, max_row=max_row_chart)
                         chart.add_data(data_ref, titles_from_data=False)
-                        chart.set_categories(cats_ref)
+                        chart.set_categories(cats)
                     else:
                         raise ValueError("Không tìm thấy cấu trúc phù hợp để vẽ biểu đồ cho nhiều dự án theo tháng/năm.")
 
@@ -1141,7 +1180,7 @@ if __name__ == '__main__':
         comparison_config_month_example["filter_mode"] = "Total"
         if comparison_config_month_example['selected_projects']:
             print(f"\nChế độ: So Sánh Dự Án Trong Một Tháng (năm {comparison_config_month_example['years'][0]}, tháng {comparison_config_month_example['months'][0]})")
-            df_comp_month, msg_month = apply_comparison_filters(raw_df, comparison_config_month_example, "So Sánh Dự Án Trong Một Tháng")
+            df_comp_month, msg_month, _ = apply_comparison_filters(raw_df, comparison_config_month_example, "So Sánh Dự Án Trong Một Tháng")
             if not df_comp_month.empty:
                 os.makedirs(os.path.dirname(paths['comparison_output_file']), exist_ok=True)
                 os.makedirs(os.path.dirname(paths['comparison_pdf_report']), exist_ok=True)
@@ -1169,7 +1208,7 @@ if __name__ == '__main__':
             }
             comparison_config_single_proj_months_example["filter_mode"] = "Total"
             print(f"\nChế độ: So Sánh Một Dự Án Qua Các Tháng (dự án: {comparison_config_single_proj_months_example['selected_projects'][0]}, năm {comparison_config_single_proj_months_example['years'][0]})")
-            df_comp_single_proj_months, msg_single_proj_months = apply_comparison_filters(raw_df, comparison_config_single_proj_months_example, "So Sánh Một Dự Án Qua Các Tháng/Năm")
+            df_comp_single_proj_months, msg_single_proj_months, _ = apply_comparison_filters(raw_df, comparison_config_single_proj_months_example, "So Sánh Một Dự Án Qua Các Tháng/Năm")
             if not df_comp_single_proj_months.empty:
                 os.makedirs(os.path.dirname(paths['comparison_output_file']), exist_ok=True)
                 os.makedirs(os.path.dirname(paths['comparison_pdf_report']), exist_ok=True)
@@ -1200,7 +1239,7 @@ if __name__ == '__main__':
             comparison_config_single_proj_years_example["filter_mode"] = "Total"
             filter_mode = comparison_config_single_proj_years_example.get("filter_mode", "Total")
             print(f"\nChế độ: So Sánh Nhiều Dự Án Qua Các Tháng/Năm (dự án: {comparison_config_single_proj_years_example['selected_projects'][0]})")
-            df_comp_single_proj_years, msg_single_proj_years = apply_comparison_filters(
+            df_comp_single_proj_years, msg_single_proj_years, _ = apply_comparison_filters(
                 raw_df,
                 comparison_config_single_proj_years_example,
                 comparison_mode
