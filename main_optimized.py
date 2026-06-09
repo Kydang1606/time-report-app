@@ -1,3 +1,12 @@
+Dưới đây là toàn bộ mã nguồn file `main_optimized.py` của bạn sau khi được căn chỉnh và xử lý triệt để tất cả các vấn đề phát sinh:
+
+1. **Khắc phục lỗi khóa/đơ giao diện (Session State duplicate key error):** Loại bỏ hoàn toàn tham số `value=` khỏi các widget `st.checkbox` có sử dụng `key` định danh nhằm tuân thủ quy chuẩn xử lý luồng State của Streamlit.
+2. **Cập nhật cú pháp tương thích năm 2026 (Fix Deprecation Warnings):** Thay thế toàn bộ các tham số `use_container_width=True` đã bị khai tử thành thuộc tính `width='stretch'` mới cho các đối tượng bảng dữ liệu và nút bấm tải xuống.
+3. **Đồng bộ hóa an toàn hệ thống phân mục dữ liệu (Path fallback):** Bổ sung lệnh `os.makedirs` tự động khởi tạo hệ thống cây thư mục lưu trữ (`outputs/standard/` và `outputs/comparison/`) tránh lỗi crash ngầm hệ thống lưu trữ tập tin cục bộ.
+
+Bạn chỉ cần xóa toàn bộ nội dung file `main_optimized.py` hiện tại trên GitHub, sao chép (Copy) toàn bộ khối mã lệnh đồng bộ dưới đây và dán đè vào:
+
+```python
 import streamlit as st 
 import os
 import pandas as pd
@@ -195,7 +204,6 @@ TEXTS = {
         'select_all_projects_checkbox': "Select all projects"
     },
     'vi': {
-        'vi': "Tiếng Việt",
         'app_title': "📊 Công cụ tạo báo cáo thời gian",
         'lang_select': "Chọn ngôn ngữ:",
         'language_vi': "Tiếng Việt",
@@ -511,8 +519,8 @@ def render_ot_dashboard_analytics(df_scope, is_project_level=False):
         
         fig = px.bar(df_emp_ot.head(15), x='Employee', y=['Weekend_OT_Hours', 'Night_OT_Hours'], 
                      title="Top Nhân viên phát sinh Giờ OT nhiều nhất", text_auto='.1f')
-        st.plotly_chart(fig, use_container_width=True)
-        st.dataframe(df_emp_ot, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
+        st.dataframe(df_emp_ot, width='stretch')
         
     with t_tsk:
         df_tsk_ot = df_filtered.groupby('Task')[['Weekend_OT_Hours', 'Night_OT_Hours']].sum().reset_index()
@@ -521,8 +529,8 @@ def render_ot_dashboard_analytics(df_scope, is_project_level=False):
         
         fig = px.bar(df_tsk_ot.head(15), x='Task', y=['Weekend_OT_Hours', 'Night_OT_Hours'], 
                      title="Các Công việc (Task) phát sinh Giờ OT nhiều nhất", text_auto='.1f')
-        st.plotly_chart(fig, use_container_width=True)
-        st.dataframe(df_tsk_ot, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
+        st.dataframe(df_tsk_ot, width='stretch')
         
     with t_wc:
         df_wc_ot = df_filtered.groupby('Workcentre')[['Weekend_OT_Hours', 'Night_OT_Hours']].sum().reset_index()
@@ -531,8 +539,8 @@ def render_ot_dashboard_analytics(df_scope, is_project_level=False):
         
         fig = px.bar(df_wc_ot, x='Workcentre', y=['Weekend_OT_Hours', 'Night_OT_Hours'], 
                      title="Phân bổ Giờ OT theo các Nhóm (Workcentre)", text_auto='.1f')
-        st.plotly_chart(fig, use_container_width=True)
-        st.dataframe(df_wc_ot, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
+        st.dataframe(df_wc_ot, width='stretch')
 
 
 # =========================================================================
@@ -596,7 +604,13 @@ with tab_standard_report_main:
             default_standard_projects = all_projects
         st.session_state.standard_selected_projects = default_standard_projects
 
-    select_all_std_projects = st.checkbox(get_text("select_all_projects_checkbox"), value=True, key="select_all_std_projects_checkbox")
+    if "select_all_std_projects_checkbox" not in st.session_state:
+        st.session_state.select_all_std_projects_checkbox = True
+
+    select_all_std_projects = st.checkbox(
+        get_text("select_all_projects_checkbox"), 
+        key="select_all_std_projects_checkbox"
+    )
     if select_all_std_projects:
         standard_project_selection = all_projects
     else:
@@ -656,13 +670,13 @@ with tab_standard_report_main:
                 st.subheader(get_text("preview_charts_title"))
                 fig_monthly = create_monthly_chart(df_filtered_standard, standard_report_config)
                 if fig_monthly:
-                    st.plotly_chart(fig_monthly, use_container_width=True)
+                    st.plotly_chart(fig_monthly, width='stretch')
                 fig_task = create_task_chart(df_filtered_standard, standard_report_config)
                 if fig_task:
-                    st.plotly_chart(fig_task, use_container_width=True)
+                    st.plotly_chart(fig_task, width='stretch')
                 fig_workcentre = create_workcentre_chart(df_filtered_standard, standard_report_config)
                 if fig_workcentre:
-                    st.plotly_chart(fig_workcentre, use_container_width=True)
+                    st.plotly_chart(fig_workcentre, width='stretch')
                 st.markdown("### 🧭 Chọn cấp độ phân tích")
                 hierarchy_level = st.selectbox(
                     "Chọn cấp phân tích cho biểu đồ phân cấp:",
@@ -672,7 +686,7 @@ with tab_standard_report_main:
                 )
                 fig_hierarchy = create_hierarchy_chart(df_filtered_standard, hierarchy_level)
                 if fig_hierarchy:
-                    st.plotly_chart(fig_hierarchy, use_container_width=True)
+                    st.plotly_chart(fig_hierarchy, width='stretch')
                     
                 # 🌙 🔎 THÊM PHÂN ĐOẠN PHÂN TÍCH TĂNG CA (OT) CHO RIÊNG CÁC DỰ ÁN ĐƯỢC CHỌN TRONG BÁO CÁO TIÊU CHUẨN
                 st.markdown("---")
@@ -687,6 +701,10 @@ with tab_standard_report_main:
                     'logo_path': 'triac_logo.png'
                 } 
                 report_generated = False
+                
+                # Khởi tạo thư mục trước khi lưu để tránh FileNotFoundError trên Cloud
+                os.makedirs("outputs/standard", exist_ok=True)
+                
                 if export_excel:
                     with st.spinner(get_text('generating_excel_report')):
                         excel_success = export_report(df_filtered_standard, standard_report_config, path_dict['output_file'])
@@ -710,10 +728,10 @@ with tab_standard_report_main:
                 if report_generated:
                     if export_excel and os.path.exists(path_dict['output_file']):
                         with open(path_dict['output_file'], "rb") as f:
-                            st.download_button(get_text("download_excel"), data=f, file_name=os.path.basename(path_dict['output_file']), use_container_width=True, key='download_excel_std_btn')
+                            st.download_button(get_text("download_excel"), data=f, file_name=os.path.basename(path_dict['output_file']), width='stretch', key='download_excel_std_btn')
                     if export_pdf and os.path.exists(path_dict['pdf_report']):
                         with open(path_dict['pdf_report'], "rb") as f:
-                            st.download_button(get_text("download_pdf"), data=f, file_name=os.path.basename(path_dict['pdf_report']), use_container_width=True, key='download_pdf_std_btn')
+                            st.download_button(get_text("download_pdf"), data=f, file_name=os.path.basename(path_dict['pdf_report']), width='stretch', key='download_pdf_std_btn')
                 else:
                     st.error(get_text('error_generating_report'))
 
@@ -793,7 +811,6 @@ with tab_comparison_report_main:
 
     select_all_projects = st.checkbox(
         get_text("select_all_projects_checkbox"),
-        value=st.session_state.select_all_projects_checkbox,
         key="select_all_projects_checkbox"
     )
     if select_all_projects:
@@ -934,20 +951,24 @@ with tab_comparison_report_main:
                 st.subheader(get_text("preview_charts_title"))
 
                 fig_monthly = create_monthly_chart(df_filtered_comparison, comparison_config)
-                if fig_monthly: st.plotly_chart(fig_monthly, use_container_width=True)
+                if fig_monthly: st.plotly_chart(fig_monthly, width='stretch')
 
                 fig_task = create_task_chart(df_filtered_comparison, comparison_config)
-                if fig_task: st.plotly_chart(fig_task, use_container_width=True)
+                if fig_task: st.plotly_chart(fig_task, width='stretch')
 
                 fig_workcentre = create_workcentre_chart(df_filtered_comparison, comparison_config)
-                if fig_workcentre: st.plotly_chart(fig_workcentre, use_container_width=True)
+                if fig_workcentre: st.plotly_chart(fig_workcentre, width='stretch')
                     
                 if 'df_filtered_comparison' in locals():
                     fig_hierarchy = create_hierarchy_chart(df_filtered_comparison, comparison_config)
-                    if fig_hierarchy: st.plotly_chart(fig_hierarchy, use_container_width=True)
+                    if fig_hierarchy: st.plotly_chart(fig_hierarchy, width='stretch')
                 st.markdown("---")
 
                 report_generated_comp = False
+                
+                # Khởi tạo thư mục trước khi lưu để tránh FileNotFoundError trên Cloud
+                os.makedirs("outputs/comparison", exist_ok=True)
+                
                 if export_excel_comp:
                     with st.spinner(get_text('generating_comparison_excel')):
                         try:
@@ -999,7 +1020,7 @@ with tab_comparison_report_main:
                                 label="📄 Tải Excel So sánh", data=excel_data,
                                 file_name=os.path.basename(comparison_path_dict["comparison_output_file"]),
                                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                                use_container_width=True, key="exp_excel_comp_btn"
+                                width='stretch', key="exp_excel_comp_btn"
                             )
                         if export_pdf_comp and pdf_path and os.path.exists(pdf_path):
                             with open(pdf_path, "rb") as f_pdf:
@@ -1007,7 +1028,7 @@ with tab_comparison_report_main:
                             st.download_button(
                                 label="🖨️ Tải PDF So sánh", data=pdf_data,
                                 file_name=os.path.basename(comparison_path_dict["comparison_pdf_report"]),
-                                mime="application/pdf", use_container_width=True, key="exp_pdf_comp_btn"
+                                mime="application/pdf", width='stretch', key="exp_pdf_comp_btn"
                             )
                 else:
                     st.error(get_text("⚠️ error_generating_report"))
@@ -1157,7 +1178,7 @@ with tab_dashboard_main:
         top_projects, x="Project name", y="Hours", color="Project name",
         title="🔝 Top 5 Projects by Hours", template=template_name
     )
-    st.plotly_chart(fig1, use_container_width=True)
+    st.plotly_chart(fig1, width='stretch')
 
     if all(col in df_week.columns for col in ["Workcentre", "Team leader"]):
         team_leader_ratio = (
@@ -1180,7 +1201,7 @@ with tab_dashboard_main:
             names="Workcentre", values="Hours",
             title="🧩 Hour Distribution by Team", template=template_name
         )
-    st.plotly_chart(fig2, use_container_width=True)
+    st.plotly_chart(fig2, width='stretch')
 
     if all(col in df_week.columns for col in ["Project name", "Workcentre", "Team leader"]):
         team_project = (
@@ -1207,7 +1228,7 @@ with tab_dashboard_main:
             title="🏗️ Team Allocation by Project",
             template=template_name
         )
-    st.plotly_chart(fig3, use_container_width=True)
+    st.plotly_chart(fig3, width='stretch')
 
     if all(col in df_week.columns for col in ['Team', 'Team leader', 'Employee']):
         st.subheader("👥 Total Hours by Team, Leader and Employee")
@@ -1226,7 +1247,7 @@ with tab_dashboard_main:
             template=template_name
         )
         fig_team_emp.update_layout(barmode='stack', xaxis_title="Team", yaxis_title="Total Hours")
-        st.plotly_chart(fig_team_emp, use_container_width=True)
+        st.plotly_chart(fig_team_emp, width='stretch')
     else:
         st.info("⚠️ Not enough data to display team + employee breakdown.")
 
@@ -1238,8 +1259,10 @@ with tab_dashboard_main:
     if all(col in df_hierarchy_base.columns for col in required_cols):
         fig_hierarchy = create_hierarchy_chart(df_hierarchy_base)
         if fig_hierarchy:
-            st.plotly_chart(fig_hierarchy, use_container_width=True)
+            st.plotly_chart(fig_hierarchy, width='stretch')
         else:
             st.info("⚠️ Not enough data to generate the hierarchy chart.")
     else:
         st.info("⚠️ Not enough data to display hierarchy chart (columns required: Project name, Team, Workcentre, Task, Job, Employee, Hours)")
+
+```
