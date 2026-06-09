@@ -1255,5 +1255,3 @@ with tab_dashboard_main:
             st.info("⚠️ Not enough data to generate the hierarchy chart.")
     else:
         st.info("⚠️ Not enough data to display hierarchy chart (columns required: Project name, Team, Workcentre, Task, Job, Employee, Hours)")
-
-```
