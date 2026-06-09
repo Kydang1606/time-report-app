@@ -392,7 +392,7 @@ def export_pdf_report(df, config, pdf_report_path, logo_path):
                 df_proj_weekend = df_proj[df_proj['IsWeekend'] == True]
                 if not df_proj_weekend.empty:
                     ot_summary = df_proj_weekend.groupby('Task')['Hours'].sum().sort_values(ascending=False)
-                    if not ot_summary.empty && ot_summary.sum() > 0:
+                    if not ot_summary.empty and ot_summary.sum() > 0:
                         fig, ax = plt.subplots(figsize=(10, 5))
                         bars = ax.barh(ot_summary.index, ot_summary.values, color='salmon')
                         ax.bar_label(bars, labels=[f"{v:.1f}" for v in ot_summary.values], padding=3)
