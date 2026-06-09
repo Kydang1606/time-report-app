@@ -1,12 +1,3 @@
-Dưới đây là toàn bộ mã nguồn file `main_optimized.py` của bạn sau khi được căn chỉnh và xử lý triệt để tất cả các vấn đề phát sinh:
-
-1. **Khắc phục lỗi khóa/đơ giao diện (Session State duplicate key error):** Loại bỏ hoàn toàn tham số `value=` khỏi các widget `st.checkbox` có sử dụng `key` định danh nhằm tuân thủ quy chuẩn xử lý luồng State của Streamlit.
-2. **Cập nhật cú pháp tương thích năm 2026 (Fix Deprecation Warnings):** Thay thế toàn bộ các tham số `use_container_width=True` đã bị khai tử thành thuộc tính `width='stretch'` mới cho các đối tượng bảng dữ liệu và nút bấm tải xuống.
-3. **Đồng bộ hóa an toàn hệ thống phân mục dữ liệu (Path fallback):** Bổ sung lệnh `os.makedirs` tự động khởi tạo hệ thống cây thư mục lưu trữ (`outputs/standard/` và `outputs/comparison/`) tránh lỗi crash ngầm hệ thống lưu trữ tập tin cục bộ.
-
-Bạn chỉ cần xóa toàn bộ nội dung file `main_optimized.py` hiện tại trên GitHub, sao chép (Copy) toàn bộ khối mã lệnh đồng bộ dưới đây và dán đè vào:
-
-```python
 import streamlit as st 
 import os
 import pandas as pd
