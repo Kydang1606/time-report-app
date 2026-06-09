@@ -14,6 +14,7 @@ import traceback
 import numpy as np
 import smtplib
 from email.mime.text import MIMEText
+from collections import defaultdict
 
 # Hàm hỗ trợ làm sạch tên file/sheet
 def sanitize_filename(name):
@@ -153,7 +154,7 @@ def apply_filters(df, config):
     return df_filtered
 
 # =========================================================================
-# 🔄 HÀM 2 ĐÃ ĐƯỢC CẬP NHẬT: export_report
+# 🔄 HÀM 2 ĐÃ ĐƯỢC CẬP NHẬT TRÁN LỖI: export_report
 # =========================================================================
 def export_report(df, config, output_file_path):
     """Xuất báo cáo tiêu chuẩn ra file Excel kèm theo phân tích Tăng ca cuối tuần & Tăng ca đêm."""
@@ -177,6 +178,9 @@ def export_report(df, config, output_file_path):
         return False
 
     try:
+        # Đảm bảo thư mục lưu trữ đã tồn tại trước khi ghi
+        os.makedirs(os.path.dirname(output_file_path), exist_ok=True)
+
         with pd.ExcelWriter(output_file_path, engine='openpyxl') as writer:
             df.to_excel(writer, sheet_name='RawData', index=False)
 
@@ -193,7 +197,7 @@ def export_report(df, config, output_file_path):
 
         ws.append(['MonthName', 'Hours'])
         for row in summary_chart.itertuples(index=False):
-            ws.append([row.MonthName, row.Hours])
+            ws.append([row[0], row[1]])
 
         # Thêm biểu đồ vào sheet Summary
         data_ref = Reference(ws, min_col=2, min_row=1, max_row=1 + len(summary_chart))
@@ -215,7 +219,8 @@ def export_report(df, config, output_file_path):
             
             ot_summary = df_weekend.groupby(['Project name', 'Task'])['Hours'].sum().reset_index().sort_values(by='Hours', ascending=False)
             for row in ot_summary.itertuples(index=False):
-                ws_ot.append([row.Project_name, row.Task, row.Hours])
+                # FIXED: Sử dụng index [0], [1], [2] tránh lỗi sai tên thuộc tính của tuple
+                ws_ot.append([row[0], row[1], row[2]])
             
             # Biểu đồ tổng giờ tăng ca cuối tuần theo Dự án
             proj_ot_chart_data = df_weekend.groupby('Project name')['Hours'].sum().reset_index()
@@ -245,7 +250,8 @@ def export_report(df, config, output_file_path):
             
             night_ot_summary = df_night_ot.groupby(['Project name', 'Employee', 'Task'])['Night_OT_Hours'].sum().reset_index().sort_values(by='Night_OT_Hours', ascending=False)
             for row in night_ot_summary.itertuples(index=False):
-                ws_night_ot.append([row.Project_name, row.Employee, row.Task, row.Night_OT_Hours])
+                # FIXED: Sử dụng index tránh lỗi vỡ cấu trúc chuỗi ký tự khoảng trắng
+                ws_night_ot.append([row[0], row[1], row[2], row[3]])
                 
             # Biểu đồ tổng giờ tăng ca đêm theo Dự án
             proj_night_chart_data = df_night_ot.groupby('Project name')['Night_OT_Hours'].sum().reset_index()
